@@ -1,0 +1,3 @@
+[submodule "arctic-api"]
+	path = arctic-api
+	url = https://github.com/arcticres/arctic-api.git

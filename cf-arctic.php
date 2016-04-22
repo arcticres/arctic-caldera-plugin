@@ -14,6 +14,17 @@ function cf_arctic_is_configured() {
 	return file_exists(plugin_dir_path(__FILE__)  . 'arctic-auth.php');
 }
 
+function cf_arctic_configure() {
+	// already loaded?
+	if (class_exists('\Arctic\Api', false)) return;
+
+	// load the arctic API
+	require plugin_dir_path(__FILE__)  . 'arctic-api' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'Api.php';
+
+	// load the configure file
+	@include plugin_dir_path(__FILE__)  . 'arctic-auth.php';
+}
+
 /**
  * Add the processors
  *
@@ -44,6 +55,9 @@ function cf_arctic_register_processor($pr) {
 	return $pr;
 }
 
+/**
+ * Todo: potentially add a settings interface for configuring API (security implications?)
+ */
 ///**
 // * Add the settings
 // *
