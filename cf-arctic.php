@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: Caldera Forms - Arctic Reservations Integration
- * Plugin URI:
+ * Plugin URI:  https://github.com/arcticres/arctic-caldera-plugin
  * Description: Create person and inquiry records in Arctic Reservations on form submission.
- * Version:     1.0.0
+ * Version:     0.1.0
  * Author:      Arctic Reservations LLC
  * Author URI:  http://www.arcticreservations.com/
  * License:     MIT
@@ -13,11 +13,8 @@
 // If this file is called directly, abort.
 if (!defined('WPINC')) die;
 
-
 /**
  * Add the processors
- *
- * @since 1.0.0
  */
 add_filter('caldera_forms_get_form_processors', 'cf_arctic_register_processor');
 function cf_arctic_register_processor($pr) {
