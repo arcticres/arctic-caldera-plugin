@@ -399,12 +399,7 @@ EOT;
 		// 2. save other fields
 		if (isset($config['save_other']) && $config['save_other']) {
 			// get used slugs
-			if (preg_match_all('/%([^%:]+)(|:[^%]*)%/', implode('', $config), $matches, PREG_PATTERN_ORDER)) {
-				$slugs = $matches[1];
-			}
-			else {
-				$slugs = array();
-			}
+			$slugs = self::_get_all_explicit_slugs($form);
 
 			// iterate over all fields
 			$other = array();
