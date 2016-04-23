@@ -140,11 +140,69 @@ class Cf_Arctic
 			$error = $exception->getMessage();
 		}
 
-		// potentially show user error?
+		// send error message
+		$message = <<<EOT
+There was an error while processing a form submission via the Arctic / Caldera 
+plugin. The details are described below. As long as the form is configured to
+store information, you can find the original submission by logging into WordPress
+and viewing past form entries. As a result, it is likely that no information was 
+lost. But as a result, the information may not appear in Arctic as expected.
+
+Error: $error
+
+If you continue to get error messages like this, make sure:
+
+* The plugin has the correct authentication information.
+* All required fields are being supplied.
+
+EOT;
+
+		// append model data
+		if ($model instanceof \Arctic\Model) {
+			$message .= "** Unsaved details **\n\n";
+			foreach ($model->toArray() as $key => $val) {
+				$message .= "$key: $val\n";
+			}
+		}
+
+		// send error message
+		wp_mail(get_option('admin_email'), 'Arctic / Caldera Form Error', $message);
+
+
+		// return error message
 		return array(
 			'type' => 'error',
 			'note' => $error
 		);
+	}
+
+	private static function _get_all_explicit_slugs($form) {
+		// must have processors
+		if (!isset($form['processors'])) return array();
+
+		$all_slugs = array();
+		foreach ($form['processors'] as $processor) {
+			// no type
+			if (!isset($processor['type'])) continue;
+
+			// not arctic?
+			if (0 !== substr_compare($processor['type'], 'arctic-', 0, 7)) continue;
+
+			// no config?
+			if (empty($processor['config'])) continue;
+
+			// get used slugs
+			if (preg_match_all('/%([^%:]+)(|:[^%]*)%/', implode('', $processor['config']), $matches, PREG_PATTERN_ORDER)) {
+				$all_slugs[] = $matches[1];
+			}
+		}
+
+		// merge all sugs together
+		if ($all_slugs) {
+			return call_user_func_array('array_merge', $all_slugs);
+		}
+
+		return array();
 	}
 
 	/**
@@ -273,6 +331,12 @@ class Cf_Arctic
 			// save
 			$person->insert();
 			self::_inserted_model_store('person', $person);
+
+			// return success
+			return array(
+				'type' => 'success',
+				'person' => $person->id
+			);
 		}
 		catch (\Arctic\Exception $e) {
 			return self::_fail($person, $config, $form, $e);
@@ -376,6 +440,12 @@ class Cf_Arctic
 			// save
 			$inquiry->insert();
 			self::_inserted_model_store('inquiry', $inquiry);
+
+			// return success
+			return array(
+				'type' => 'success',
+				'inquiry' => $inquiry->id
+			);
 		}
 		catch (\Arctic\Exception $e) {
 			return self::_fail($inquiry, $config, $form, $e);
