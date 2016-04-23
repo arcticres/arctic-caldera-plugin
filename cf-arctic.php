@@ -63,15 +63,22 @@ function _cf_arctic_configure() {
 	@include plugin_dir_path(__FILE__) . 'arctic-auth.php';
 }
 
+/**
+ * @param string $form_name
+ * @return \Arctic\Model\FormField[]
+ */
 function _cf_arctic_custom_fields($form_name) {
 	// not configured? return array
 	if (!_cf_arctic_is_configured()) {
 		return array();
 	}
 
+	// configure
+	_cf_arctic_configure();
+
 	// get form fields
 	try {
-		return \Arctic\Model\FormField::load('formname = \'' . addslashes($form_name) . '\' ORDER BY order ASC');
+		return \Arctic\Model\FormField::query('formname = \'' . addslashes($form_name) . '\' AND builtin = FALSE ORDER BY order ASC');
 	}
 	catch (\Arctic\Exception $e) {
 		return array();
@@ -122,6 +129,13 @@ function _cf_arctic_inserted($key, $id=null) {
 }
 
 function _cf_arctic_fail($model, $config, $form, $error) {
+	// accept exceptions
+	$exception = null;
+	if ($error instanceof \Exception) {
+		$exception = $error;
+		$error = $exception->getMessage();
+	}
+
 	// potentially show user error?
 	return array(
 		'type' => 'error',
@@ -139,6 +153,12 @@ function _cf_arctic_fail($model, $config, $form, $error) {
  * @return array|null
  */
 function cf_arctic_create_person($config, $form) {
+	if (!_cf_arctic_is_configured()) {
+		return _cf_arctic_fail(null, $config, $form, 'Arctic plugin is not configured.');
+	}
+
+	_cf_arctic_configure();
+
 	// create person
 	$person = new \Arctic\Model\Person\Person();
 
@@ -255,7 +275,7 @@ function cf_arctic_create_person($config, $form) {
 		_cf_arctic_inserted('person', $person->id);
 	}
 	catch (\Arctic\Exception $e) {
-		return _cf_arctic_fail($person, $config, $form, $e->getMessage());
+		return _cf_arctic_fail($person, $config, $form, $e);
 	}
 }
 
@@ -269,6 +289,12 @@ function cf_arctic_create_person($config, $form) {
  * @return array|null
  */
 function cf_arctic_create_inquiry($config, $form) {
+	if (!_cf_arctic_is_configured()) {
+		return _cf_arctic_fail(null, $config, $form, 'Arctic plugin is not configured.');
+	}
+
+	_cf_arctic_configure();
+
 	// create person
 	$inquiry = new \Arctic\Model\Inquiry\Inquiry();
 
@@ -311,7 +337,7 @@ function cf_arctic_create_inquiry($config, $form) {
 	}
 	
 	// 2. save other fields
-	if (isset($config['save_other_fields']) && $config['save_other_fields']) {
+	if (isset($config['save_other']) && $config['save_other']) {
 		// get used slugs
 		if (preg_match_all('/%([^%:]+)(|:[^%]*)%/', implode('', $config), $matches, PREG_PATTERN_ORDER)) {
 			$slugs = $matches[1];
@@ -356,8 +382,8 @@ function cf_arctic_create_inquiry($config, $form) {
 		_cf_arctic_inserted('inquiry', $inquiry->id);
 	}
 	catch (\Arctic\Exception $e) {
-		return _cf_arctic_fail($inquiry, $config, $form, $e->getMessage());
+		return _cf_arctic_fail($inquiry, $config, $form, $e);
 	}
 }
 
-// TODO: potentially add arctic country field
+// TODO: potentially add arctic country field, trip type field, rental item field
