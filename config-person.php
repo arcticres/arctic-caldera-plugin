@@ -110,12 +110,12 @@
 	</div>
 </div>
 
-<div class="caldera-config-group">
+<?php /* <div class="caldera-config-group">
 	<label><?php echo __('Country', 'cf-arctic'); ?> </label>
 	<div class="caldera-config-field">
 		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[r_addresscountry]" value="{{r_addresscountry}}">
 	</div>
-</div>
+</div> */ ?>
 
 <!-- potentially add label -->
 
