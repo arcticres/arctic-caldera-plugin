@@ -99,7 +99,7 @@
 <div class="caldera-config-group">
 	<label><?php echo __('State', 'cf-arctic'); ?> </label>
 	<div class="caldera-config-field">
-		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[r_state]" value="{{r_state}}">
+		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[r_addressstate]" value="{{r_addressstate}}">
 	</div>
 </div>
 
