@@ -10,6 +10,10 @@
  * License URI: https://opensource.org/licenses/MIT
  */
 
+// If this file is called directly, abort.
+if (!defined('WPINC')) die;
+
+
 /**
  * Add the processors
  *
@@ -67,6 +71,11 @@ class Cf_Arctic
 
 		// load the configure file
 		@include plugin_dir_path(__FILE__) . 'arctic-auth.php';
+
+		// register cache
+		if (@include(plugin_dir_path(__FILE__) . 'wordpress-cache.php')) {
+			\Arctic\Cache\Manager::registerPotentialDefaultCacheType('\\WordPress_Cache', true);
+		}
 
 		// set loaded
 		self::$_is_loaded = true;
