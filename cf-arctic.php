@@ -268,7 +268,7 @@ EOT;
 		}
 
 		// 2. phone number
-		if (isset($config['r_phonenumber']) && $value = Caldera_Forms::do_magic_tags($config['r_phonenumber'])) {
+		if (isset($config['r_phonenumber']) && $value = preg_replace('/[^0-9x]/', '', Caldera_Forms::do_magic_tags($config['r_phonenumber']))) {
 			$phone = new \Arctic\Model\Person\PhoneNumber();
 			$phone->phonenumber = $value;
 			if (isset($config['r_phonecountry']) && $value = Caldera_Forms::do_magic_tags($config['r_phonecountry'])) {
