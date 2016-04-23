@@ -10,21 +10,6 @@
  * License URI: https://opensource.org/licenses/MIT
  */
 
-function cf_arctic_is_configured() {
-	return file_exists(plugin_dir_path(__FILE__)  . 'arctic-auth.php');
-}
-
-function cf_arctic_configure() {
-	// already loaded?
-	if (class_exists('\Arctic\Api', false)) return;
-
-	// load the arctic API
-	require plugin_dir_path(__FILE__)  . 'arctic-api' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'Api.php';
-
-	// load the configure file
-	@include plugin_dir_path(__FILE__)  . 'arctic-auth.php';
-}
-
 /**
  * Add the processors
  *
@@ -34,7 +19,7 @@ add_filter('caldera_forms_get_form_processors', 'cf_arctic_register_processor');
 function cf_arctic_register_processor($pr) {
 	$pr['arctic-person'] = array(
 		'name' => __('Arctic: Create Person', 'cf-arctic'),
-		'description' => __('Create a person record in Arctic on submission', 'cf-arctic'),
+		'description' => __('Create a person record in Arctic on submission.', 'cf-arctic'),
 		'author' => 'Arctic Reservations LLC',
 		'author_url' => 'http://www.arcticreservations.com/',
 		'icon' => plugin_dir_url(__FILE__) . 'icon.png',
@@ -44,7 +29,7 @@ function cf_arctic_register_processor($pr) {
 
 	$pr['arctic-inquiry'] = array(
 		'name' => __('Arctic: Create Inquiry', 'cf-arctic'),
-		'description' => __('Create a person record in Arctic on submission', 'cf-arctic'),
+		'description' => __('Create an inquiry record in Arctic on submission. Must be called after creating a person record.', 'cf-arctic'),
 		'author' => 'Arctic Reservations LLC',
 		'author_url' => 'http://www.arcticreservations.com/',
 		'icon' => plugin_dir_url(__FILE__) . 'icon.png',
@@ -58,26 +43,91 @@ function cf_arctic_register_processor($pr) {
 /**
  * Todo: potentially add a settings interface for configuring API (security implications?)
  */
-///**
-// * Add the settings
-// *
-// * @since 1.0.0
-// */
-//add_action('admin_init', 'cf_arctic_settings_init');
-//function cf_arctic_settings_init() {
-//	register_setting('cf-arctic', 'my-setting');
-//	add_settings_section('section-one', 'Section One', 'section_one_callback', 'my-plugin');
-//	add_settings_field('field-one', 'Field One', 'field_one_callback', 'my-plugin', 'section-one');
-//}
-//
-//add_action('admin_menu', 'cf_arctic_settings_menu');
-//function cf_arctic_settings_menu() {
-//	add_options_page('Caldera Forms - Arctic Reservations Integration', 'Caldera - Arctic', 'manage_options', 'cf-arctic', 'cf_arctic_settings_page');
-//}
-//
-//function cf_arctic_settings_page() {
-//	echo 'a';
-//}
+
+/**
+ * Private functions used for processing form submissions.
+ */
+
+function _cf_arctic_is_configured() {
+	return file_exists(plugin_dir_path(__FILE__)  . 'arctic-auth.php');
+}
+
+function _cf_arctic_configure() {
+	// already loaded?
+	if (class_exists('\Arctic\Api', false)) return;
+
+	// load the arctic API
+	require plugin_dir_path(__FILE__) . 'arctic-api' . DIRECTORY_SEPARATOR . 'includes' . DIRECTORY_SEPARATOR . 'Api.php';
+
+	// load the configure file
+	@include plugin_dir_path(__FILE__) . 'arctic-auth.php';
+}
+
+function _cf_arctic_custom_fields($form_name) {
+	// not configured? return array
+	if (!_cf_arctic_is_configured()) {
+		return array();
+	}
+
+	// get form fields
+	try {
+		return \Arctic\Model\FormField::load('formname = \'' . addslashes($form_name) . '\' ORDER BY order ASC');
+	}
+	catch (\Arctic\Exception $e) {
+		return array();
+	}
+}
+
+function _cf_arctic_is_true($value, $default=false) {
+	// numeric
+	if (is_numeric($value)) {
+		return $value > 0;
+	}
+
+	// string
+	if (is_string($value)) {
+		if (preg_match('/true|yes/i', $value)) {
+			return true;
+		}
+
+		if (preg_match('/false|no/i', $value)) {
+			return false;
+		}
+
+		return $default;
+	}
+
+	// hard convert
+	return (bool)$value;
+}
+
+function _cf_arctic_get_countryid($value) {
+	return null;
+}
+
+function _cf_arctic_inserted($key, $id=null) {
+	static $inserted = array();
+
+	//read
+	if (null === $id) {
+		if (isset($inserted[$key])) {
+			return $inserted[$key];
+		}
+		return false;
+	}
+
+	// write
+	$inserted[$key] = $id;
+	return $id;
+}
+
+function _cf_arctic_fail($model, $config, $form, $error) {
+	// potentially show user error?
+	return array(
+		'type' => 'error',
+		'note' => $error
+	);
+}
 
 /**
  * Create a person record in Arctic
@@ -86,82 +136,228 @@ function cf_arctic_register_processor($pr) {
  *
  * @param array $config Processor config
  * @param array $form Form config
+ * @return array|null
  */
-function cf_arctic_create_person($config, $form){
+function cf_arctic_create_person($config, $form) {
+	// create person
+	$person = new \Arctic\Model\Person\Person();
 
-	// create fields
-	$fields = array();
-	foreach( $form['fields'] as $field ){
-		if( $field['type'] === 'html' || $field['type'] === 'button' ){
-			continue;
+	// iterate over fields
+	foreach ($config as $key => $value) {
+		if (!is_string($key) || strlen($key) < 3) continue;
+		switch (substr($key, 0, 2)) {
+			case 'f_': // built-in field
+			case 'c_': // custom field
+				// strip prefix
+				$obj_key = substr($key, 2);
+
+				// protected
+				if ('_' === $obj_key[0] || in_array($obj_key, array('id', 'emailaddresses', 'addresses', 'phonenumbers', 'notes'))) {
+					break;
+				}
+
+				// process value
+				$value = Caldera_Forms::do_magic_tags($value);
+				if (empty($value)) break;
+
+				// store value
+				$person->$obj_key = $value;
 		}
-		$entry_value = Caldera_Forms::get_field_data( $field['ID'], $form );
-		$fields[] = array(
-			'title'		=>	$field['label'],
-			'value'		=>	$entry_value,
-			'short'		=>	( strlen( $entry_value ) < 100 ? true : false )
-		);
-	}
-	// Create Payload
-	$payload = array(
-		"username"		=>	 Caldera_Forms::do_magic_tags( $config['username'] )
-	);
-	// icon
-	if( !empty( $config['file'] ) ){
-		$payload['icon_url'] =	$config['file'];
 	}
 
-	// override channel if set
-	$channel = trim( $config['channel'] );
-	if( !empty( $channel ) ){
-		$payload['channel'] = Caldera_Forms::do_magic_tags( trim( $config['channel'] ) );
+	// handle relationship fields
+
+	// 1. email address
+	if (isset($config['r_emailaddress']) && $value = Caldera_Forms::do_magic_tags($config['r_emailaddress'])) {
+		$email = new \Arctic\Model\Person\EmailAddress();
+		$email->emailaddress = $value;
+		if (isset($config['r_emaillabel']) && $value = Caldera_Forms::do_magic_tags($config['r_emaillabel'])) {
+			$email->type = $value;
+		}
+		else {
+			$email->type = 'Primary';
+		}
+		if (isset($config['r_emailsubscribe'])) {
+			$email->subscribetoemaillist = _cf_arctic_is_true($config['r_emailsubscribe']);
+		}
+		$person->emailaddresses[] = $email;
 	}
-	// attach if setup
-	if( !empty( $config['attach'] ) ){
-		$payload['attachments'] = array(
-			array(
-				"fallback" 	=>	Caldera_Forms::do_magic_tags( $config['text'] ),
-				"pretext"	=>	Caldera_Forms::do_magic_tags( $config['text'] ),
-				"color"		=>	$config['color'],
-				"fields"	=>	$fields
-			)
-		);
-	}else{
-		$payload['text'] = Caldera_Forms::do_magic_tags( $config['text'] );
+
+	// 2. phone number
+	if (isset($config['r_phonenumber']) && $value = Caldera_Forms::do_magic_tags($config['r_phonenumber'])) {
+		$phone = new \Arctic\Model\Person\PhoneNumber();
+		$phone->phonenumber = $value;
+		if (isset($config['r_phonecountry']) && $value = Caldera_Forms::do_magic_tags($config['r_phonecountry'])) {
+			if ($id = _cf_arctic_get_countryid($value)) {
+				$phone->countryid = $id;
+			}
+		}
+		if (isset($config['r_phonelabel']) && $value = Caldera_Forms::do_magic_tags($config['r_phonelabel'])) {
+			$phone->type = $value;
+		}
+		else {
+			$phone->type = 'Primary';
+		}
+		$person->phonenumbers[] = $phone;
 	}
 
-	/**
-	 * Filter request before sending message to Slack API
-	 *
-	 * Runs before encoding to JSON
-	 *
-	 * @since 1.1.0
-	 *
-	 * @param array $payload Arguments for API request
-	 * @param array $config Processor config
-	 * @param array $form Form config
-	 */
-	add_filter( 'cf_arctic_create_person_pre_request', $payload, $config, $form );
+	// 3. address
+	if (isset($config['r_address1']) || isset($config['r_address2']) || isset($config['r_addresscity']) || isset($config['r_addressstate']) || isset($config['r_addresspostalcode']) || isset($config['r_addresscountry'])) {
+		$address = new \Arctic\Model\Person\Address();
+		$save = false;
+		if (isset($config['r_address1']) && $value = Caldera_Forms::do_magic_tags($config['r_address1'])) {
+			$address->address1 = $value;
+			$save = true;
+		}
+		if (isset($config['r_address2']) && $value = Caldera_Forms::do_magic_tags($config['r_address2'])) {
+			$address->address2 = $value;
+			$save = true;
+		}
+		if (isset($config['r_addresscity']) && $value = Caldera_Forms::do_magic_tags($config['r_addresscity'])) {
+			$address->city = $value;
+			$save = true;
+		}
+		if (isset($config['r_addressstate']) && $value = Caldera_Forms::do_magic_tags($config['r_addressstate'])) {
+			$address->state = $value;
+			$save = true;
+		}
+		if (isset($config['r_addresspostalcode']) && $value = Caldera_Forms::do_magic_tags($config['r_addresspostalcode'])) {
+			$address->postalcode = $value;
+			$save = true;
+		}
+		if (isset($config['r_addresscountry']) && $value = Caldera_Forms::do_magic_tags($config['r_addresscountry'])) {
+			if ($id = _cf_arctic_get_countryid($value)) {
+				$address->countryid = $id;
+			}
+		}
+		if (isset($config['r_addresslabel']) && $value = Caldera_Forms::do_magic_tags($config['r_addresslabel'])) {
+			$address->type = $value;
+		}
+		else {
+			$address->type = 'Primary';
+		}
+		if ($save) {
+			$person->addresses[] = $address;
+		}
+	}
 
-	$args = array(
-		'body' => array(
-			'payload'	=>	json_encode($payload)
-		)
-	);
+	// 4. note
+	if (isset($config['r_note']) && $value = Caldera_Forms::do_magic_tags($config['r_note'])) {
+		$note = new \Arctic\Model\Person\Note();
+		$note->note = $value;
+		$person->notes[] = $note;
+	}
 
-	$response = wp_remote_post( $config['url'], $args );
-	/**
-	 * Get response from Slack API message request.
-	 *
-	 * Runs after request is sent, but before form processor ends
-	 *
-	 * @since 1.1.0
-	 *
-	 * @param WP_Error|array $response The response or WP_Error on failure.
-	 * @param array $payload Arguments for API request
-	 * @param array $config Processor config
-	 * @param array $form Form config
-	 */
-	do_action( 'cf_arctic_create_person_sent', $response, $payload, $config, $form );
-
+	// RUN
+	try {
+		// save
+		$person->insert();
+		_cf_arctic_inserted('person', $person->id);
+	}
+	catch (\Arctic\Exception $e) {
+		return _cf_arctic_fail($person, $config, $form, $e->getMessage());
+	}
 }
+
+/**
+ * Create an inquiry record in Arctic
+ *
+ * @since 1.0.0
+ *
+ * @param array $config Processor config
+ * @param array $form Form config
+ * @return array|null
+ */
+function cf_arctic_create_inquiry($config, $form) {
+	// create person
+	$inquiry = new \Arctic\Model\Inquiry\Inquiry();
+
+	// get person
+	if ($person_id = _cf_arctic_inserted('person')) {
+		$inquiry->personid;
+	}
+	else {
+		return _cf_arctic_fail($inquiry, $config, $form, 'No previously saved person information.');
+	}
+
+	// iterate over fields
+	foreach ($config as $key => $value) {
+		if (!is_string($key) || strlen($key) < 3) continue;
+		switch (substr($key, 0, 2)) {
+			case 'f_': // built-in field
+			case 'c_': // custom field
+				// strip prefix
+				$obj_key = substr($key, 2);
+
+				// protected
+				if ('_' === $obj_key[0] || in_array($obj_key, array('id', 'businessgroup', 'trip', 'person'))) {
+					break;
+				}
+
+				// process value
+				$value = Caldera_Forms::do_magic_tags($value);
+				if (empty($value)) break;
+
+				// store value
+				$inquiry->$obj_key = $value;
+		}
+	}
+
+	// special
+	
+	// 1. mode
+	if (empty($inquiry->mode)) {
+		$inquiry->mode = 'CalderaForm' . (isset($form['name']) ? ': ' . $form['name'] : '');
+	}
+	
+	// 2. save other fields
+	if (isset($config['save_other_fields']) && $config['save_other_fields']) {
+		// get used slugs
+		if (preg_match_all('/%([^%:]+)(|:[^%]*)%/', implode('', $config), $matches, PREG_PATTERN_ORDER)) {
+			$slugs = $matches[1];
+		}
+		else {
+			$slugs = array();
+		}
+
+		// iterate over all fields
+		$other = array();
+		foreach ($form['fields'] as $field) {
+			// skip
+			if ($field['type'] === 'html' || $field['type'] === 'button') {
+				continue;
+			}
+
+			// included elsewhere?
+			if (isset($field['slug']) && in_array($field['slug'], $slugs)) {
+				continue;
+			}
+
+			// get value
+			$entry_value = Caldera_Forms::get_field_data($field['ID'], $form);
+			$other[] = sprintf('%s: %s', $field['label'], $entry_value);
+		}
+
+		// had other?
+		if ($other) {
+			if ($inquiry->notes) {
+				$inquiry->notes = $inquiry->notes . "\n\n" . implode("\n", $other);
+			}
+			else {
+				$inquiry->notes = implode("\n", $other);
+			}
+		}
+	}
+
+	// RUN
+	try {
+		// save
+		$inquiry->insert();
+		_cf_arctic_inserted('inquiry', $inquiry->id);
+	}
+	catch (\Arctic\Exception $e) {
+		return _cf_arctic_fail($inquiry, $config, $form, $e->getMessage());
+	}
+}
+
+// TODO: potentially add arctic country field
