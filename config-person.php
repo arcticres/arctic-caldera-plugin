@@ -1,3 +1,8 @@
+<?php if (!Cf_Arctic::is_configured()) { ?> 
+	<p><strong style="color:red;">Not configured.</strong> Before you can use the Arctic / Caldera integration, you must
+		include a <code>arctic-auth.php</code> file in the plugin directory with API credentials.</p>
+<?php } ?>
+
 <p>Below you can map your form fields into the Arctic fields. Use the Caldera Form magic tags to reference form data.
 	Leave any unneeded fields blank, except for first and last name which are required.</p>
 
@@ -116,7 +121,7 @@
 
 <h4>Custom Fields</h4>
 
-<?php foreach (_cf_arctic_custom_fields('typecustomer') as $custom_field) { ?>
+<?php foreach (Cf_Arctic::get_custom_fields('typecustomer') as $custom_field) { ?>
 	<div class="caldera-config-group">
 		<label><?php echo isset($custom_field->data['setLabel']) ? $custom_field->data['setLabel'] : $custom_field->name; ?> </label>
 		<div class="caldera-config-field">
