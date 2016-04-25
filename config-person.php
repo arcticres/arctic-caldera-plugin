@@ -30,7 +30,7 @@
 </div>
 
 <div class="caldera-config-group">
-	<label><?php echo __('Source', 'cf-arctic'); ?> </label>
+	<label><?php echo __('Referral Source', 'cf-arctic'); ?> </label>
 	<div class="caldera-config-field">
 		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[f_customersource]" value="{{f_customersource}}">
 	</div>
@@ -92,7 +92,7 @@
 <div class="caldera-config-group">
 	<label><?php echo __('City', 'cf-arctic'); ?> </label>
 	<div class="caldera-config-field">
-		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[r_city]" value="{{r_city}}">
+		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[r_addresscity]" value="{{r_addresscity}}">
 	</div>
 </div>
 

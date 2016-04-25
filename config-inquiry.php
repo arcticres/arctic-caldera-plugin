@@ -12,14 +12,6 @@
 <h4>Built-In Fields</h4>
 
 <div class="caldera-config-group">
-	<label><?php echo __('Mode', 'cf-arctic'); ?> </label>
-	<div class="caldera-config-field">
-		<input type="text" class="block-input field-config magic-tag-enabled" name="{{_name}}[f_mode]" value="{{f_mode}}">
-		<p>Leave blank to use form name.</p>
-	</div>
-</div>
-
-<div class="caldera-config-group">
 	<label><?php echo __('Notes', 'cf-arctic'); ?> </label>
 	<div class="caldera-config-field">
 		<textarea class="block-input field-config magic-tag-enabled" name="{{_name}}[f_notes]">{{f_notes}}</textarea>

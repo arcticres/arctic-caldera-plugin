@@ -92,7 +92,7 @@ class Cf_Arctic
 
 		// get form fields
 		try {
-			return \Arctic\Model\FormField::query('formname = \'' . addslashes($form_name) . '\' AND builtin = FALSE ORDER BY order ASC');
+			return \Arctic\Model\FormField::query('type != \'Fields_Instructions\' AND formname = \'' . addslashes($form_name) . '\' AND builtin = FALSE ORDER BY order ASC');
 		}
 		catch (\Arctic\Exception $e) {
 			return array();
