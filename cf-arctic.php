@@ -335,7 +335,12 @@ EOT;
 		// RUN
 		try {
 			// save
-			$person->insert();
+			if (isset($config['attempt_update']) && $config['attempt_update']) {
+				$person->insertOrUpdate();
+			}
+			else {
+				$person->insert();
+			}
 			self::_inserted_model_store('person', $person);
 
 			// return success
