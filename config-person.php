@@ -129,3 +129,13 @@
 		</div>
 	</div>
 <?php } ?>
+
+<h4>Settings</h4>
+
+<div class="caldera-config-group">
+    <label><?php echo __('Attempt Update', 'cf-slack'); ?> </label>
+    <div class="caldera-config-field">
+        <label><input type="checkbox" class="field-config" name="{{_name}}[attempt_update]" id="{{_id}}_attempt_update" value="1" {{#if attempt_update}}checked="checked"{{/if}}> Update existing person if potential duplicate</label>
+        <p class="description"><?php echo __('Recommended. By default, always Arctic creates a new person record. If checked, Arctic will look for a close match (based on name, email address and phone number), and update the existing entry instead.', 'cf-arctic'); ?></p>
+    </div>
+</div>
