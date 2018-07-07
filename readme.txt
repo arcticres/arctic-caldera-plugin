@@ -2,7 +2,7 @@
 Contributors: nathanntg
 Tags: arctic, caldera forms, form notification
 Requires at least: 3.9
-Tested up to: 4.5
+Tested up to: 4.9
 Stable tag: 0.1.0
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -29,10 +29,11 @@ https://github.com/arcticres/arctic-caldera-plugin
 
 == Installation ==
 
-1. Install the plugin through the WordPress Plugins Installer or upload `arctic-caldera-forms` folder
-   to the wp-content/plugins directory.
-2. Upload a `arctic-auth.php` file into the plugin directory with your API credentials (for security
-   reasons, the API credentials can not be managed through WordPress directly at this time).
+1. Install the plugin through the WordPress Plugins Installer or upload the files to a new 
+   `arctic-caldera-forms` folder in the wp-content/plugins directory.
+2. Upload a `arctic-auth.php` file into the plugin directory with your API credentials 
+   (for security reasons, the API credentials can not be managed through WordPress 
+   directly at this time).
 3. Activate the plugin from the "Plugins" page.
 
 == Usage ==
@@ -41,13 +42,13 @@ See the first screenshot below for an illustration of these steps:
 
 1. Create or edit a Caldera form, and go to the "Processors" tab.
 2. Click "Add Processor".
-3. Select one of the two Arctic processors (one creates a person record, one creates an inquiry
-   record). Most likely, you will want to use both, to create both a person record and a
-   corresponding inquiry record. In this case, add the "Person" one first (otherwise Arctic will
-   not know who to associate the inquiry with).
-4. Once added, you will see a list of the built-in and custom fields from your Arctic installation.
-   You will use the "magic tags" to embed specific entries from the form into each corresponding
-   Arctic field.
+3. Select one of the two Arctic processors (one creates a person record, one creates an 
+   inquiry record). Most likely, you will want to use both, to create both a person record 
+   and a corresponding inquiry record. In this case, add the "Person" one first (otherwise 
+   Arctic will not know who to associate the inquiry with).
+4. Once added, you will see a list of the built-in and custom fields from your Arctic 
+   installation. You will use the "magic tags" to embed specific entries from the form 
+   into each corresponding Arctic field.
 
 == Screenshots ==
 
